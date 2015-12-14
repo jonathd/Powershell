@@ -1,0 +1,13 @@
+#Entre deux ordinateurs du même domaine
+Enter-PSSession -ComputerName SERVER01
+
+#Il est possible de spécifier l’utilisateur avec lequel on souhaite se connecter via le paramètre Credential : 
+Enter-PSSession -ComputerName SERVER01 -Credential SERVER01\Administrator
+
+# Ainsi, un prompt demandant le mot de passe apparaîtra.
+
+#Depuis un ordinateur d’un workgroup vers un ordinateur en domaine
+#Il est nécessaire que le poste source contienne l’ordinateur distant dans sa liste de client de confiance
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value * 
+#OU 
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value SERVER02
