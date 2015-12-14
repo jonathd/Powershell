@@ -82,3 +82,12 @@ foreach ($partage in $base)
     } 
 }
 echo '$error | Out-File -FilePath $Log -Append' | Out-File -FilePath $fichiersresultats –Append
+
+
+Explication : 
+Ce script génère un fichier appelé startCreateGroupsShare.txt
+Il faudra ensuite renommer ce fichier avec l’extension .ps1 et l’exécuter. Ce script permet de :
+– Créer un groupe NomPartage_L pour les accès en lecture  uniquement.
+– Créer un groupe NomPartage_M pour les accès en lecture / écriture.
+– Créer un partage si la colonne CreateShare a pour valeur Yes. Donner les permissions de lecture seule sur ce partage au groupe NomPartage_L et lecture / écriture au groupe NomPartage_M.
+
