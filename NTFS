@@ -1,0 +1,84 @@
+# Powershell
+# ETAPE 1 : IMPORTATION DU FICHIER CSV
+# Définis les groupes à créer, les partages à créer et les permissions NTFS à appliquer.
+
+# Etape 1.1 : importation du fichier CSV (au format UTF8). Ouvrir avec NOTEPAD et enregistrer au format UTF8.
+$base = Import-Csv -Path "C:\Scripts\Create-Groups-Share\Base.csv" -UseCulture -Encoding UTF8
+
+# Etape 1.2 : création du fichier PowerShell de commande :
+$fichiersresultats = "C:\Scripts\Create-Groups-Share\startCreateGroupsShare.txt"
+echo "#Script PowerShell à lancer" | Out-File -FilePath $fichiersresultats -Force
+
+# Etape 1.3 : importation du module Quest ActiveRoles Management Shell (à installer sur le serveur de migration)
+echo "Add-PSSnapin Quest.ActiveRoles.ADManagement" | Out-File -FilePath $fichiersresultats -Append
+
+# Etape 1.4 : Fichiers de log et d'avancement
+$Log = "C:\Scripts\Create-Groups-Share\log-create-Groups-Share.txt"
+echo "Echo ""Fichier de logs et avancement"" | Out-File -FilePath $Log -Force" | Out-File -FilePath $fichiersresultats -Append
+
+# Etape 1.5 : Définir l'OU où seront créés les groupes
+$ParentContainer = """OU=Groupes,OU=CAM,dc=cam,dc=intra"""
+
+# ETAPE 2 : POUR CHAQUE LIGNE DU FICHIER, CREATION DES GROUPES, PARTAGES (si CreateShare est égale à Yes)
+
+foreach ($partage in $base)
+{
+    echo "echo ""Traitement du dossier $($partage.Name)"" | Out-File -FilePath $Log -Append" | Out-File -FilePath $fichiersresultats -Append
+
+    # Etape 2.1 : Définition du nom des groupes
+    $GroupR = $partage.Name + "_L"
+    $GroupM = $partage.Name + "_M"
+
+    # Etape 2.2 : Création des groupes
+
+    # Création du groupe pour l'accès en lecture seule.
+    echo "New-QADGroup -Name ""$GroupR"" -SamAccountName ""$GroupR"" -GroupScope DomainLocal -ParentContainer $ParentContainer -Description ""Autoriser lecture seule sur $($partage.Path)""" | Out-File -FilePath $fichiersresultats -Append 
+    $MembersRo = $($partage.RO).Split(",")
+    foreach ($MemberRo in $MembersRo)
+    {
+        if (!($MemberRo -eq ""))
+        {
+            if (!((Get-QADObject -Identity $MemberRo) -eq $null))
+            {
+                echo "Add-QADGroupMember -Identity ""$GroupR"" -Member ""$MemberRo""" | Out-File -FilePath $fichiersresultats -Append   
+            }
+            else
+            {
+                echo "echo ""L'objet $MemberRo n'existe pas"" | Out-File -FilePath $Log -Append" | Out-File -FilePath $fichiersresultats -Append
+            } 
+        }
+    }
+
+    # Création du groupe pour l'accès en lecture et écriture
+    echo "New-QADGroup -Name ""$GroupM"" -SamAccountName ""$GroupM"" -GroupScope DomainLocal -ParentContainer $ParentContainer -Description ""Autoriser lecture et écriture sur $($partage.Path)""" | Out-File -FilePath $fichiersresultats -Append
+    $MembersRW = $($partage.RW).Split(",")
+    foreach ($MemberRW in $MembersRW)
+    {
+        if (!($MemberRw -eq ""))
+        {
+            if (!((Get-QADObject -Identity $MemberRw) -eq $null))
+            {
+                echo "Add-QADGroupMember -Identity ""$GroupM"" -Member ""$MemberRw""" | Out-File -FilePath $fichiersresultats -Append   
+            }
+            else
+            {
+                echo "echo ""L'objet $MemberRw n'existe pas"" | Out-File -FilePath $Log -Append" | Out-File -FilePath $fichiersresultats -Append
+            } 
+        }
+    }
+    # Etape 2.2 : Création des partages si CreateShare a pour valeur Yes.
+
+    if ($partage.CreateShare -eq "Yes")
+    {
+        # Gestion des noms de partage / dossiers avec des espaces.
+        $partage.Name = """$($partage.Name)"""
+        $partage.Path = """$($partage.Path)"""
+        echo "New-SmbShare -Path $($partage.Path) -Name $($partage.Name) -ChangeAccess ""$GroupM"" -ReadAccess ""$GroupR""" | Out-File -FilePath $fichiersresultats -Append
+        if (!($partage.Description -eq ""))
+        {
+            $partage.Description = """$($partage.Description)"""
+            echo "Set-SmbShare -Name $($partage.Name) -Description $($partage.Description) -Force" | Out-File -FilePath $fichiersresultats -Append
+        }
+    } 
+}
+echo '$error | Out-File -FilePath $Log -Append' | Out-File -FilePath $fichiersresultats –Append
