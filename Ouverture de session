@@ -11,3 +11,7 @@ Enter-PSSession -ComputerName SERVER01 -Credential SERVER01\Administrator
 Set-Item WSMan:\localhost\Client\TrustedHosts -Value * 
 #OU 
 Set-Item WSMan:\localhost\Client\TrustedHosts -Value SERVER02
+
+#Le paramètre Value peut prendre les valeurs suivantes :
+#un nom explicit d’une machine (SERV01) pour accepter toutes les machines
+#myenterprise.com : pour accepter toutes les machines possédant le suffixe DNS myenterprise.com
